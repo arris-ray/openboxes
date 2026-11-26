@@ -5,6 +5,7 @@ import { getCurrentLocation } from 'selectors';
 
 import stockScanApi from 'api/services/StockScanApi';
 import BarcodeEntry from 'components/stock-scan/BarcodeEntry';
+import BarcodeScanner from 'components/stock-scan/BarcodeScanner';
 import flattenCategories from 'components/stock-scan/flattenCategories';
 import FoundProduct from 'components/stock-scan/FoundProduct';
 import NewProductForm from 'components/stock-scan/NewProductForm';
@@ -42,6 +43,8 @@ const StockScanPage = () => {
   const [mode, setMode] = useState(readStoredMode);
   const [screen, setScreen] = useState(Screen.SCAN);
   const [barcode, setBarcode] = useState(null);
+  // The last code looked up; the camera briefly ignores it when it restarts
+  const [lastScanned, setLastScanned] = useState(null);
   const [matches, setMatches] = useState([]);
   const [selected, setSelected] = useState(null);
   const [categories, setCategories] = useState(null);
@@ -80,6 +83,7 @@ const StockScanPage = () => {
     setBanner(null);
     setError(null);
     setBarcode(scanned);
+    setLastScanned(scanned);
     setScreen(Screen.LOADING);
     try {
       const response = await stockScanApi.lookup(scanned);
@@ -192,6 +196,7 @@ const StockScanPage = () => {
               ? translate('react.stockScan.scanToUse.label', 'Scan an item to record using it.')
               : translate('react.stockScan.scanToAdd.label', 'Scan an item to add it to stock.')}
           </p>
+          <BarcodeScanner onScan={lookup} ignoreCode={lastScanned} />
           <BarcodeEntry onSubmit={lookup} />
         </div>
       )}
