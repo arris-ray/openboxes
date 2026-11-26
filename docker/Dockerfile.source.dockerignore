@@ -1,0 +1,9 @@
+# Build-context exclusions for Dockerfile.source (BuildKit applies <Dockerfile>.dockerignore automatically).
+# Note: .git is intentionally NOT excluded; the gradle-git-properties plugin needs it to generate git.properties.
+**/node_modules
+build
+.gradle
+.idea
+docker/mysql
+docker/.env
+docker/openboxes.war
