@@ -1,0 +1,76 @@
+# Development loop: run OpenBoxes from source with live reloading, without building an image.
+#
+#   docker compose -f docker-compose-dev.yml up
+#
+# - `web` runs `npm run watch`, rebuilding the React/CSS bundles into src/main/webapp/webpack/ on every save.
+# - `app` runs `./gradlew bootRun` (Grails development mode), which serves those bundles and GSPs from disk and
+#   reloads most Groovy changes.
+# - `db` is the same database service (and data) as docker-compose.yml.
+#
+# Uses the same compose project as docker-compose.yml, so starting this replaces the production-image app container
+# and `docker compose up` switches back. Both serve http://localhost:8080/openboxes. See README.MD for details.
+name: docker
+
+services:
+  db:
+    extends:
+      file: docker-compose.yml
+      service: db
+
+  web:
+    image: node:14.21.3-bullseye
+    container_name: openboxes-web-dev
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+      - node-modules:/workspace/node_modules
+    # Reinstall dependencies only when package-lock.json changes, then watch.
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        hash=$$(sha1sum package-lock.json | cut -d' ' -f1)
+        if [ "$$(cat node_modules/.lock-hash 2>/dev/null)" != "$$hash" ]; then
+          npm ci --no-audit --no-fund && echo "$$hash" > node_modules/.lock-hash
+        fi
+        exec npm run watch
+    environment:
+      # Use polling if file changes made on the host are not being picked up.
+      WATCHPACK_POLLING: ${WATCHPACK_POLLING:-false}
+
+  app:
+    image: eclipse-temurin:8-jdk-jammy
+    container_name: openboxes-app-dev
+    working_dir: /workspace
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+      - 5005:5005 # JDWP: attach a Java debugger here
+    volumes:
+      - ..:/workspace
+      - gradle-home:/root/.gradle
+      - gradle-project-cache:/workspace/.gradle
+      - gradle-build:/workspace/build
+    # The `web` service owns the frontend build, so skip the npm/webpack tasks that processResources depends on.
+    command: >-
+      ./gradlew bootRun --console=plain
+      -PnodeDownload=false
+      -PbootRunMaxHeap=${BOOTRUN_MAX_HEAP:-3g}
+      -x npm_run_bundle
+    environment:
+      DATASOURCE_USERNAME: ${DATASOURCE_USERNAME:-openboxes}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD:-openboxes}
+      DATASOURCE_URL: ${DATASOURCE_URL:-jdbc:mysql://db/openboxes?serverTimezone=UTC&useSSL=false}
+      GRAILS_SERVER_URL: ${GRAILS_SERVER_URL:-http://localhost:8080/openboxes/}
+      # Trust X-Forwarded-* headers from a reverse proxy such as `tailscale serve` or nginx.
+      SERVER_USE_FORWARD_HEADERS: ${SERVER_USE_FORWARD_HEADERS:-true}
+      DEBUG_ENABLED: ${DEBUG_ENABLED:-true}
+
+volumes:
+  node-modules:
+  gradle-home:
+  gradle-project-cache:
+  gradle-build:
