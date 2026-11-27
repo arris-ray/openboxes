@@ -46,6 +46,8 @@ const StockScanPage = () => {
   // The last code looked up; the camera briefly ignores it when it restarts
   const [lastScanned, setLastScanned] = useState(null);
   const [matches, setMatches] = useState([]);
+  // For a code no product has: the providers' details, and the server's suggested new product
+  const [unknown, setUnknown] = useState(null);
   const [selected, setSelected] = useState(null);
   const [categories, setCategories] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +77,7 @@ const StockScanPage = () => {
     setScreen(Screen.SCAN);
     setBarcode(null);
     setMatches([]);
+    setUnknown(null);
     setSelected(null);
     setError(null);
   };
@@ -89,6 +92,10 @@ const StockScanPage = () => {
       const response = await stockScanApi.lookup(scanned);
       const found = response.data.data;
       setMatches(found);
+      setUnknown(found.length ? null : {
+        facts: response.data.facts || null,
+        draft: response.data.newProduct || null,
+      });
       if (found.length === 1) {
         setSelected(found[0]);
         setScreen(Screen.FOUND);
@@ -207,6 +214,9 @@ const StockScanPage = () => {
             {translate('react.stockScan.lookingUp.label', 'Looking up')}
             {` ${barcode}…`}
           </p>
+          <p className="stock-scan__message stock-scan__message--muted">
+            {translate('react.stockScan.lookingUpDetails.label', 'New products can take a few seconds while their details are found.')}
+          </p>
         </div>
       )}
 
@@ -239,6 +249,8 @@ const StockScanPage = () => {
         categories ? (
           <NewProductForm
             barcode={barcode}
+            draft={unknown?.draft}
+            facts={unknown?.facts}
             categories={categories}
             submitting={submitting}
             error={error}
@@ -255,8 +267,9 @@ const StockScanPage = () => {
       {screen === Screen.UNKNOWN && mode === ScanMode.USE && (
         <div className="stock-scan__panel">
           <p className="stock-scan__message">
-            {translate('react.stockScan.unknownBarcode.label', 'No product has barcode')}
-            {` ${barcode}.`}
+            {unknown?.facts?.name
+              ? `${unknown.facts.name} ${translate('react.stockScan.notInOpenBoxes.label', 'isn\'t in OpenBoxes yet.')}`
+              : `${translate('react.stockScan.unknownBarcode.label', 'No product has barcode')} ${barcode}.`}
           </p>
           <button type="button" className="stock-scan__button stock-scan__button--add" onClick={() => switchMode(ScanMode.ADD)}>
             {translate('react.stockScan.switchToAdd.label', 'Switch to Add')}

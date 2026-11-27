@@ -17,3 +17,6 @@ export const MAX_QUANTITY = 10000;
 
 /** localStorage key that keeps the Add/Use mode between visits. */
 export const MODE_STORAGE_KEY = 'openboxes.stockScan.mode';
+
+/** localStorage key that keeps the category chosen for the last new product. */
+export const CATEGORY_STORAGE_KEY = 'openboxes.stockScan.categoryId';
