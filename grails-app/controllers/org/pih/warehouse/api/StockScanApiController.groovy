@@ -29,7 +29,8 @@ import org.pih.warehouse.productfacts.ProductIdentifiers
  *   GET  /api/stockScans?barcode=…&ndc=…   products with that barcode (UPC) or NDC, with their stock at the current
  *                                          location. The barcode may itself be a typed NDC; ndc is optional. If
  *                                          no product matches, "facts" holds details from the product facts
- *                                          providers (or null), and "providers" what each provider did.
+ *                                          providers (or null), "providers" what each provider did, and
+ *                                          "newProduct" a suggested new product to create from them.
  *   POST /api/stockScans             add or use stock (see StockScanCommand)
  *
  * Not @Transactional: StockScanService commits the transaction, then product availability is refreshed here, so the
@@ -54,6 +55,7 @@ class StockScanApiController {
                 ProductFactsLookup lookup = productFactsService.lookup(identifiers)
                 response.facts = lookup.factsJson()
                 response.providers = lookup.outcomesJson()
+                response.newProduct = StockScanService.newProductDraft(identifiers, lookup.facts)
             }
             render(response as JSON)
         }
