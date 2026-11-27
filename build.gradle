@@ -406,7 +406,8 @@ manifest {
 
 node {
     distBaseUrl = 'https://nodejs.org/dist'
-    download = true
+    // Pass -PnodeDownload=false to use the Node/npm already on the PATH instead (e.g. see docker/Dockerfile.source)
+    download = (findProperty('nodeDownload') ?: 'true').toBoolean()
     npmVersion = '6.14.18'
     version = '14.21.3'
 }

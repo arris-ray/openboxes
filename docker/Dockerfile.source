@@ -1,0 +1,53 @@
+# Builds the OpenBoxes image entirely from source, on any architecture (e.g. linux/arm64 on Apple Silicon).
+#
+# Unlike ./Dockerfile (which expects a prebuilt openboxes.war to be copied in by `./gradlew prepareDocker`),
+# this compiles the WAR inside a Linux container, so no JDK or Node toolchain is needed on the host.
+#
+# Run from the repository root:
+#   docker build -f docker/Dockerfile.source -t openboxes/openboxes:latest .
+#
+# Requires BuildKit (the default since Docker Engine 23) so that Dockerfile.source.dockerignore is applied.
+
+# ==========================================
+# Stage 1: compile the WAR
+# ==========================================
+FROM eclipse-temurin:8-jdk-jammy AS builder
+
+# The Gradle node plugin would normally download Node itself, but it does not resolve arm64 binaries correctly.
+# Instead, use the native Node (matching the version pinned in build.gradle) from the official multi-arch image.
+COPY --from=node:14.21.3-bullseye /usr/local/bin/ /usr/local/bin/
+COPY --from=node:14.21.3-bullseye /usr/local/lib/node_modules/ /usr/local/lib/node_modules/
+
+WORKDIR /workspace
+COPY . .
+
+RUN ./gradlew assemble -PnodeDownload=false -Dgrails.env=prod --console=plain --no-daemon
+
+# ==========================================
+# Stage 2: runtime image (kept in sync with ./Dockerfile)
+# ==========================================
+FROM eclipse-temurin:8-jre-jammy
+
+LABEL maintainer="support@openboxes.com"
+EXPOSE 8080
+
+# Install curl for healthcheck
+RUN apt-get update && apt-get install curl -y
+
+# Default flags for the JVM. These can be replaced at the runtime.
+ENV JAVA_TOOL_OPTIONS="-Xms1024m -Xmx1024m -XX:+UseParallelGC -Djava.awt.headless=true"
+
+# Create openboxes user and group
+RUN useradd --user-group --shell /bin/false  --home-dir /app openboxes
+WORKDIR /app
+
+# Create and chown 'uploads' directory for the OB app
+RUN mkdir uploads && chown openboxes:openboxes uploads/
+
+# Copy and chown the WAR file
+COPY --from=builder --chown=openboxes:openboxes /workspace/build/libs/openboxes.war openboxes.war
+
+USER openboxes
+
+# Directly execute the WAR file, which runs the application with an embedded Tomcat servlet
+CMD ["java","-Dgrails.env=prod","-jar","/app/openboxes.war"]
