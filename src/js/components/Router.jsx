@@ -140,6 +140,11 @@ const AsyncLoadDataPage = Loadable({
   loading: Loading,
 });
 
+const AsyncStockScanPage = Loadable({
+  loader: () => import('components/stock-scan/StockScanPage'),
+  loading: Loading,
+});
+
 const AsyncResetInstancePage = Loadable({
   loader: () => import('components/reset-instance/ResettingInstanceInfoPage'),
   loading: Loading,
@@ -291,6 +296,7 @@ const Router = () => {
               <AsyncWelcomePage />
             </Route>
             <Route path="**/loadData/index"><AsyncLoadDataPage /></Route>
+            <Route path={['**/stockScan/index', '**/stockScan']}><AsyncStockScanPage /></Route>
             <Route path="**/resettingInstanceInfo/index">
               <AsyncResetInstancePage />
             </Route>
