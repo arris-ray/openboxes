@@ -65,7 +65,7 @@ class ProductIdentifiersSpec extends Specification {
 
         where:
         // A 3-prefixed UPC with a bad check digit isn't trusted as an NDC either
-        code << ["012345678900", "343547422100", "123456", "01234567"]
+        code << ["012345678900", "343547422100", "123456", "01234567", "000000000000", "0000000000000"]
     }
 
     void "a typed NDC '#code' is read as an NDC, not a barcode"() {

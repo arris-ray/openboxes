@@ -19,13 +19,17 @@ import org.pih.warehouse.inventory.StockScanException
 import org.pih.warehouse.inventory.StockScanService
 import org.pih.warehouse.inventory.Transaction
 import org.pih.warehouse.product.Product
+import org.pih.warehouse.productfacts.ProductFactsLookup
+import org.pih.warehouse.productfacts.ProductFactsService
 import org.pih.warehouse.productfacts.ProductIdentifiers
 
 /**
  * Barcode scanning for the stock scan page. Routed by the generic "/api/${resource}s" mapping:
  *
  *   GET  /api/stockScans?barcode=…&ndc=…   products with that barcode (UPC) or NDC, with their stock at the current
- *                                          location. The barcode may itself be a typed NDC; ndc is optional.
+ *                                          location. The barcode may itself be a typed NDC; ndc is optional. If
+ *                                          no product matches, "facts" holds details from the product facts
+ *                                          providers (or null), and "providers" what each provider did.
  *   POST /api/stockScans             add or use stock (see StockScanCommand)
  *
  * Not @Transactional: StockScanService commits the transaction, then product availability is refreshed here, so the
@@ -34,6 +38,7 @@ import org.pih.warehouse.productfacts.ProductIdentifiers
 class StockScanApiController {
 
     StockScanService stockScanService
+    ProductFactsService productFactsService
     ProductAvailabilityService productAvailabilityService
     UserService userService
 
@@ -43,7 +48,14 @@ class StockScanApiController {
             ProductIdentifiers identifiers = StockScanService.parseIdentifiers(params.barcode as String,
                     params.ndc as String)
             List<Product> products = stockScanService.findProducts(identifiers)
-            render([data: products.collect { stockScanService.toProductStockJson(location, it) }] as JSON)
+            Map response = [data: products.collect { stockScanService.toProductStockJson(location, it) }]
+            if (!products) {
+                // Not in OpenBoxes: ask the product facts providers, to help create the product
+                ProductFactsLookup lookup = productFactsService.lookup(identifiers)
+                response.facts = lookup.factsJson()
+                response.providers = lookup.outcomesJson()
+            }
+            render(response as JSON)
         }
     }
 

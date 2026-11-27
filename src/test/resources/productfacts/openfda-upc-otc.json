@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "disclaimer": "Do not rely on openFDA to make decisions regarding medical care. While we make every effort to ensure that data is accurate, you should assume all results are unvalidated. We may limit or otherwise restrict your access to the API in line with our Terms of Service.",
+    "terms": "https://open.fda.gov/terms/",
+    "license": "https://open.fda.gov/license/",
+    "last_updated": "2026-11-25",
+    "results": {
+      "skip": 0,
+      "limit": 5,
+      "total": 1
+    }
+  },
+  "results": [
+    {
+      "product_ndc": "76176-019",
+      "generic_name": "aluminum chlorohydrate",
+      "labeler_name": "Ningbo Liyuan Daily Chemical Products Co., Ltd.",
+      "brand_name": "LUCKY SUPER SOFT ANTIPERSPIRANT DEODORANT COOL COMFORT",
+      "active_ingredients": [
+        {
+          "name": "ALUMINUM CHLOROHYDRATE",
+          "strength": "20 g/100g"
+        }
+      ],
+      "finished": true,
+      "packaging": [
+        {
+          "package_ndc": "76176-019-01",
+          "description": "45 g in 1 APPLICATOR (76176-019-01)",
+          "marketing_start_date": "20240901",
+          "sample": false
+        }
+      ],
+      "listing_expiration_date": "20261231",
+      "openfda": {
+        "manufacturer_name": [
+          "Ningbo Liyuan Daily Chemical Products Co., Ltd."
+        ],
+        "spl_set_id": [
+          "27b8f1d1-cc52-c8bb-e063-6394a90a4cf3"
+        ],
+        "is_original_packager": [
+          true
+        ],
+        "upc": [
+          "0808829127164"
+        ],
+        "unii": [
+          "HPN8MZW13M"
+        ]
+      },
+      "marketing_category": "OTC MONOGRAPH DRUG",
+      "dosage_form": "STICK",
+      "spl_id": "27b8edbb-431a-b2fd-e063-6394a90aa2fa",
+      "product_type": "HUMAN OTC DRUG",
+      "route": [
+        "TOPICAL"
+      ],
+      "marketing_start_date": "20240901",
+      "product_id": "76176-019_27b8edbb-431a-b2fd-e063-6394a90aa2fa",
+      "application_number": "M019",
+      "brand_name_base": "LUCKY SUPER SOFT ANTIPERSPIRANT DEODORANT COOL COMFORT"
+    }
+  ]
+}

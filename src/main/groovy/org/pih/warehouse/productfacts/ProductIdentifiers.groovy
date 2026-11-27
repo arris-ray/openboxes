@@ -89,7 +89,8 @@ final class ProductIdentifiers {
 
     /** @return the GTIN-14 form of an 8, 12, 13 or 14-digit code with a valid check digit; otherwise null */
     static String toGtin14(String digits) {
-        if (!(digits ==~ /\d{8}|\d{12,14}/)) {
+        // All zeros passes the check digit test, but is only ever a placeholder (openFDA has dozens of them)
+        if (!(digits ==~ /\d{8}|\d{12,14}/) || digits ==~ /0+/) {
             return null
         }
         String body = digits.substring(0, digits.length() - 1)

@@ -1,0 +1,109 @@
+{
+  "meta": {
+    "disclaimer": "Do not rely on openFDA to make decisions regarding medical care. While we make every effort to ensure that data is accurate, you should assume all results are unvalidated. We may limit or otherwise restrict your access to the API in line with our Terms of Service.",
+    "terms": "https://open.fda.gov/terms/",
+    "license": "https://open.fda.gov/license/",
+    "last_updated": "2026-11-25",
+    "results": {
+      "skip": 0,
+      "limit": 5,
+      "total": 1
+    }
+  },
+  "results": [
+    {
+      "product_ndc": "43547-422",
+      "generic_name": "Lisinopril and Hydrochlorothiazide Tablets",
+      "labeler_name": "Solco Healthcare LLC",
+      "brand_name": "Lisinopril and Hydrochlorothiazide",
+      "active_ingredients": [
+        {
+          "name": "LISINOPRIL",
+          "strength": "20 mg/1"
+        },
+        {
+          "name": "HYDROCHLOROTHIAZIDE",
+          "strength": "25 mg/1"
+        }
+      ],
+      "finished": true,
+      "packaging": [
+        {
+          "package_ndc": "43547-422-10",
+          "description": "100 TABLET in 1 BOTTLE (43547-422-10)",
+          "marketing_start_date": "20150312",
+          "sample": false
+        },
+        {
+          "package_ndc": "43547-422-11",
+          "description": "1000 TABLET in 1 BOTTLE (43547-422-11)",
+          "marketing_start_date": "20150312",
+          "sample": false
+        },
+        {
+          "package_ndc": "43547-422-50",
+          "description": "500 TABLET in 1 BOTTLE (43547-422-50)",
+          "marketing_start_date": "20150312",
+          "sample": false
+        }
+      ],
+      "listing_expiration_date": "20271231",
+      "openfda": {
+        "manufacturer_name": [
+          "Solco Healthcare LLC"
+        ],
+        "rxcui": [
+          "197885",
+          "197886",
+          "197887"
+        ],
+        "spl_set_id": [
+          "96922ddc-e87f-4670-b22e-0ffd0d8f66e1"
+        ],
+        "is_original_packager": [
+          true
+        ],
+        "upc": [
+          "0343547422103",
+          "0343547421106"
+        ],
+        "nui": [
+          "N0000175359",
+          "N0000175419",
+          "M0471776"
+        ],
+        "pharm_class_pe": [
+          "Increased Diuresis [PE]"
+        ],
+        "pharm_class_epc": [
+          "Thiazide Diuretic [EPC]"
+        ],
+        "pharm_class_cs": [
+          "Thiazides [CS]"
+        ],
+        "unii": [
+          "0J48LPH2TH",
+          "E7199S1YWR"
+        ]
+      },
+      "marketing_category": "ANDA",
+      "dosage_form": "TABLET",
+      "spl_id": "aa807721-e199-4e66-a188-a034be14f6a4",
+      "product_type": "HUMAN PRESCRIPTION DRUG",
+      "route": [
+        "ORAL"
+      ],
+      "marketing_start_date": "20150312",
+      "product_id": "43547-422_aa807721-e199-4e66-a188-a034be14f6a4",
+      "application_number": "ANDA076230",
+      "brand_name_base": "Lisinopril and Hydrochlorothiazide",
+      "pharm_class": [
+        "Angiotensin Converting Enzyme Inhibitor [EPC]",
+        "Angiotensin-converting Enzyme Inhibitors [MoA]",
+        "Increased Diuresis [PE]",
+        "Thiazide Diuretic [EPC]",
+        "Thiazides [CS]"
+      ]
+    }
+  ]
+}

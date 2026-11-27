@@ -1,0 +1,149 @@
+{
+  "meta": {
+    "disclaimer": "Do not rely on openFDA to make decisions regarding medical care. While we make every effort to ensure that data is accurate, you should assume all results are unvalidated. We may limit or otherwise restrict your access to the API in line with our Terms of Service.",
+    "terms": "https://open.fda.gov/terms/",
+    "license": "https://open.fda.gov/license/",
+    "last_updated": "2026-11-25",
+    "results": {
+      "skip": 0,
+      "limit": 5,
+      "total": 125
+    }
+  },
+  "results": [
+    {
+      "product_ndc": "45802-873",
+      "generic_name": "Nicotine Polacrilex",
+      "labeler_name": "Padagis Israel Pharmaceuticals Ltd",
+      "brand_name": "Nicotine Polacrilex",
+      "active_ingredients": [
+        {
+          "name": "NICOTINE",
+          "strength": "4 mg/1"
+        }
+      ],
+      "finished": true,
+      "packaging": [
+        {
+          "package_ndc": "45802-873-05",
+          "description": "3 CONTAINER in 1 CARTON (45802-873-05)  / 24 LOZENGE in 1 CONTAINER (45802-873-03)",
+          "marketing_start_date": "20140331",
+          "sample": false
+        }
+      ],
+      "listing_expiration_date": "20271231",
+      "openfda": {
+        "manufacturer_name": [
+          "Padagis Israel Pharmaceuticals Ltd"
+        ],
+        "rxcui": [
+          "359818"
+        ],
+        "spl_set_id": [
+          "8d4dfba9-1571-4128-9cdc-47cdce04e3e4"
+        ],
+        "is_original_packager": [
+          true
+        ],
+        "upc": [
+          "0012345678905"
+        ],
+        "nui": [
+          "N0000175706",
+          "M0014836"
+        ],
+        "pharm_class_epc": [
+          "Cholinergic Nicotinic Agonist [EPC]"
+        ],
+        "pharm_class_cs": [
+          "Nicotine [CS]"
+        ],
+        "unii": [
+          "6M3C89ZY6R"
+        ]
+      },
+      "marketing_category": "ANDA",
+      "dosage_form": "LOZENGE",
+      "spl_id": "574b2fe4-a95b-400d-a107-4658e84f7d87",
+      "product_type": "HUMAN OTC DRUG",
+      "route": [
+        "ORAL"
+      ],
+      "marketing_start_date": "20140331",
+      "product_id": "45802-873_574b2fe4-a95b-400d-a107-4658e84f7d87",
+      "application_number": "ANDA077007",
+      "brand_name_base": "Nicotine Polacrilex",
+      "pharm_class": [
+        "Cholinergic Nicotinic Agonist [EPC]",
+        "Nicotine [CS]"
+      ]
+    },
+    {
+      "product_ndc": "56062-543",
+      "generic_name": "Nicotine Polacrilex",
+      "labeler_name": "Publix Super Markets Inc",
+      "brand_name": "nicotine coated",
+      "active_ingredients": [
+        {
+          "name": "NICOTINE",
+          "strength": "2 mg/1"
+        }
+      ],
+      "finished": true,
+      "packaging": [
+        {
+          "package_ndc": "56062-543-60",
+          "description": "1 CONTAINER in 1 CARTON (56062-543-60)  / 20 LOZENGE in 1 CONTAINER",
+          "marketing_start_date": "20260611",
+          "sample": false
+        }
+      ],
+      "listing_expiration_date": "20271231",
+      "openfda": {
+        "manufacturer_name": [
+          "Publix Super Markets Inc"
+        ],
+        "rxcui": [
+          "359817"
+        ],
+        "spl_set_id": [
+          "8cb5577b-48c0-47f8-8979-0ab54d713045"
+        ],
+        "is_original_packager": [
+          true
+        ],
+        "upc": [
+          "0012345678905"
+        ],
+        "nui": [
+          "N0000175706",
+          "M0014836"
+        ],
+        "pharm_class_epc": [
+          "Cholinergic Nicotinic Agonist [EPC]"
+        ],
+        "pharm_class_cs": [
+          "Nicotine [CS]"
+        ],
+        "unii": [
+          "6M3C89ZY6R"
+        ]
+      },
+      "marketing_category": "ANDA",
+      "dosage_form": "LOZENGE",
+      "spl_id": "c6fd8417-23fc-49a6-89b8-8ed9059c16a9",
+      "product_type": "HUMAN OTC DRUG",
+      "route": [
+        "ORAL"
+      ],
+      "marketing_start_date": "20260611",
+      "product_id": "56062-543_c6fd8417-23fc-49a6-89b8-8ed9059c16a9",
+      "application_number": "ANDA077007",
+      "brand_name_base": "nicotine coated",
+      "pharm_class": [
+        "Cholinergic Nicotinic Agonist [EPC]",
+        "Nicotine [CS]"
+      ]
+    }
+  ]
+}
