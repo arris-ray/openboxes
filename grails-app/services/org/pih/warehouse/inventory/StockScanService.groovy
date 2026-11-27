@@ -21,6 +21,7 @@ import org.pih.warehouse.product.Category
 import org.pih.warehouse.product.Product
 import org.pih.warehouse.product.ProductService
 import org.pih.warehouse.product.ProductType
+import org.pih.warehouse.productfacts.ProductIdentifiers
 
 /**
  * Adds and uses stock from barcode scans.
@@ -75,15 +76,37 @@ class StockScanService {
         return digits.replaceFirst(/^0+/, "") ?: "0"
     }
 
+    /**
+     * @throws StockScanException if the code is neither a barcode nor an NDC
+     */
+    static ProductIdentifiers parseIdentifiers(String barcode, String ndc) {
+        try {
+            return ProductIdentifiers.parse(barcode, ndc)
+        } catch (IllegalArgumentException e) {
+            throw StockScanException.badRequest(e.message)
+        }
+    }
+
+    /**
+     * Active products whose UPC is the barcode (ignoring leading zeros), or whose NDC is one of the candidate NDCs in
+     * any of its 10, 11 or 12-digit forms (ignoring hyphens and spaces).
+     */
     @Transactional(readOnly = true)
-    List<Product> findProductsByBarcode(String barcode) {
-        String key = gtinKey(normalizeBarcode(barcode))
-        return Product.executeQuery("""
-                select p from Product p
-                where p.active = true
-                and p.upc is not null
-                and trim(leading '0' from trim(p.upc)) = :key
-                order by p.name""", [key: key])
+    List<Product> findProducts(ProductIdentifiers identifiers) {
+        List<String> conditions = []
+        Map params = [:]
+        if (identifiers.barcode) {
+            conditions << "(p.upc is not null and trim(leading '0' from trim(p.upc)) = :key)"
+            params.key = gtinKey(identifiers.barcode)
+        }
+        if (identifiers.ndcCandidates) {
+            conditions << "(p.ndc is not null and replace(replace(trim(p.ndc), '-', ''), ' ', '') in (:ndcForms))"
+            params.ndcForms = identifiers.ndcDigitForms as List
+        }
+        // A plain String: GORM would turn the parts of a GString into query parameters
+        String query = "select p from Product p where p.active = true and (" + conditions.join(" or ") +
+                ") order by p.name"
+        return Product.executeQuery(query, params)
     }
 
     /**

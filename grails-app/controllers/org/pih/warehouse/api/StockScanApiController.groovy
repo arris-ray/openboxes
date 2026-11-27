@@ -19,11 +19,13 @@ import org.pih.warehouse.inventory.StockScanException
 import org.pih.warehouse.inventory.StockScanService
 import org.pih.warehouse.inventory.Transaction
 import org.pih.warehouse.product.Product
+import org.pih.warehouse.productfacts.ProductIdentifiers
 
 /**
  * Barcode scanning for the stock scan page. Routed by the generic "/api/${resource}s" mapping:
  *
- *   GET  /api/stockScans?barcode=…   products with that barcode (UPC), with their stock at the current location
+ *   GET  /api/stockScans?barcode=…&ndc=…   products with that barcode (UPC) or NDC, with their stock at the current
+ *                                          location. The barcode may itself be a typed NDC; ndc is optional.
  *   POST /api/stockScans             add or use stock (see StockScanCommand)
  *
  * Not @Transactional: StockScanService commits the transaction, then product availability is refreshed here, so the
@@ -38,7 +40,9 @@ class StockScanApiController {
     def list() {
         handleErrors {
             Location location = currentLocation()
-            List<Product> products = stockScanService.findProductsByBarcode(params.barcode as String)
+            ProductIdentifiers identifiers = StockScanService.parseIdentifiers(params.barcode as String,
+                    params.ndc as String)
+            List<Product> products = stockScanService.findProducts(identifiers)
             render([data: products.collect { stockScanService.toProductStockJson(location, it) }] as JSON)
         }
     }
