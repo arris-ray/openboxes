@@ -114,6 +114,11 @@ $stock-scan-tap: 48px; // minimum comfortable touch target
     margin: 0;
   }
 
+  &__message--muted {
+    color: $stock-scan-muted;
+    font-size: 14px;
+  }
+
   &__product {
     margin-bottom: 4px;
   }
@@ -229,6 +234,38 @@ $stock-scan-tap: 48px; // minimum comfortable touch target
       height: 20px;
       margin: 0;
     }
+  }
+
+  &__facts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid $stock-scan-border;
+    border-radius: $stock-scan-radius;
+    background: #f6f8fa;
+  }
+
+  &__facts-list {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 12px;
+    margin: 0;
+
+    dt {
+      color: $stock-scan-muted;
+      font-weight: normal;
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__facts-source {
+    color: $stock-scan-muted;
+    font-size: 14px;
   }
 
   &__options {

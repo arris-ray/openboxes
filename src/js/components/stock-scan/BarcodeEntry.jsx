@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 
 import PropTypes from 'prop-types';
 
+import { normalizeTypedCode } from 'components/stock-scan/ndc';
 import useTranslate from 'hooks/useTranslate';
 
-/** Typing a barcode instead of scanning it. */
+/** Typing a barcode, or a drug's NDC, instead of scanning it. */
 const BarcodeEntry = ({ onSubmit, disabled }) => {
   const translate = useTranslate();
   const [barcode, setBarcode] = useState('');
 
   const submit = (event) => {
     event.preventDefault();
-    const digits = barcode.replace(/[\s-]/g, '');
-    if (digits) {
-      onSubmit(digits);
+    const code = normalizeTypedCode(barcode);
+    if (code) {
+      onSubmit(code);
       setBarcode('');
     }
   };
@@ -21,7 +22,7 @@ const BarcodeEntry = ({ onSubmit, disabled }) => {
   return (
     <form className="stock-scan__barcode-entry" onSubmit={submit}>
       <label htmlFor="stock-scan-barcode" className="stock-scan__label">
-        {translate('react.stockScan.typeBarcode.label', 'Type a barcode')}
+        {translate('react.stockScan.typeBarcodeOrNdc.label', 'Type a barcode or NDC')}
       </label>
       <div className="stock-scan__inline">
         <input

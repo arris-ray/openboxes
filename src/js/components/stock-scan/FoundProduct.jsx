@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
 import QuantityStepper from 'components/stock-scan/QuantityStepper';
+import { scannedLotShape, stockRowForLot } from 'components/stock-scan/scannedLot';
 import { stockRowKey, stockRowLabel } from 'components/stock-scan/stockRowLabel';
 import { MAX_QUANTITY, ScanMode } from 'components/stock-scan/stockScanConstants';
 import useTranslate from 'hooks/useTranslate';
@@ -12,18 +13,22 @@ import useTranslate from 'hooks/useTranslate';
  * depending on the mode.
  */
 const FoundProduct = ({
-  mode, productStock, submitting, error, onSubmit, onCancel, onSwitchMode,
+  mode, productStock, scannedLot, submitting, error, onSubmit, onCancel, onSwitchMode,
 }) => {
   const translate = useTranslate();
   const { product, quantityOnHand, items } = productStock;
   const isUse = mode === ScanMode.USE;
 
   const [quantity, setQuantity] = useState(1);
-  // USE: rows are sorted soonest expiry first, so the first one is the default
-  const [rowKey, setRowKey] = useState(items.length ? stockRowKey(items[0]) : null);
-  const [showOptions, setShowOptions] = useState(false);
-  const [lotNumber, setLotNumber] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
+  // USE: the scanned lot if it's in stock; otherwise the first row, which expires soonest
+  const [rowKey, setRowKey] = useState(() => {
+    const row = stockRowForLot(items, scannedLot) || items[0];
+    return row ? stockRowKey(row) : null;
+  });
+  // ADD: a scanned lot and expiry are filled in, and shown
+  const [showOptions, setShowOptions] = useState(!isUse && Boolean(scannedLot));
+  const [lotNumber, setLotNumber] = useState(scannedLot?.lotNumber || '');
+  const [expirationDate, setExpirationDate] = useState(scannedLot?.expirationDate || '');
   const [comment, setComment] = useState('');
 
   const selectedRow = items.find((row) => stockRowKey(row) === rowKey);
@@ -243,6 +248,8 @@ export const productStockShape = PropTypes.shape({
 FoundProduct.propTypes = {
   mode: PropTypes.oneOf(Object.values(ScanMode)).isRequired,
   productStock: productStockShape.isRequired,
+  /** Lot and expiry read from the package's DataMatrix */
+  scannedLot: scannedLotShape,
   submitting: PropTypes.bool.isRequired,
   error: PropTypes.string,
   onSubmit: PropTypes.func.isRequired,
@@ -251,5 +258,6 @@ FoundProduct.propTypes = {
 };
 
 FoundProduct.defaultProps = {
+  scannedLot: null,
   error: null,
 };

@@ -13,14 +13,20 @@ import grails.gorm.transactions.NotTransactional
 import grails.gorm.transactions.Transactional
 import grails.validation.ValidationException
 
+import org.pih.warehouse.LocalizationUtil
 import org.pih.warehouse.api.AvailableItem
 import org.pih.warehouse.core.ActivityCode
 import org.pih.warehouse.core.Constants
 import org.pih.warehouse.core.Location
+import org.pih.warehouse.core.Synonym
+import org.pih.warehouse.core.SynonymTypeCode
 import org.pih.warehouse.product.Category
 import org.pih.warehouse.product.Product
 import org.pih.warehouse.product.ProductService
 import org.pih.warehouse.product.ProductType
+import org.pih.warehouse.productfacts.Ndc
+import org.pih.warehouse.productfacts.ProductFacts
+import org.pih.warehouse.productfacts.ProductIdentifiers
 
 /**
  * Adds and uses stock from barcode scans.
@@ -37,6 +43,7 @@ class StockScanService {
 
     static final int MAX_QUANTITY = 10000
     static final int MAX_NAME_LENGTH = 255
+    static final int MAX_DESCRIPTION_LENGTH = 2000
     static final int MAX_SAME_SECOND_ATTEMPTS = 3
     static final String DEFAULT_ADD_COMMENT = "Added by barcode scan"
     static final String DEFAULT_USE_COMMENT = "Used (barcode scan)"
@@ -75,15 +82,37 @@ class StockScanService {
         return digits.replaceFirst(/^0+/, "") ?: "0"
     }
 
+    /**
+     * @throws StockScanException if the code is neither a barcode nor an NDC
+     */
+    static ProductIdentifiers parseIdentifiers(String barcode, String ndc) {
+        try {
+            return ProductIdentifiers.parse(barcode, ndc)
+        } catch (IllegalArgumentException e) {
+            throw StockScanException.badRequest(e.message)
+        }
+    }
+
+    /**
+     * Active products whose UPC is the barcode (ignoring leading zeros), or whose NDC is one of the candidate NDCs in
+     * any of its 10, 11 or 12-digit forms (ignoring hyphens and spaces).
+     */
     @Transactional(readOnly = true)
-    List<Product> findProductsByBarcode(String barcode) {
-        String key = gtinKey(normalizeBarcode(barcode))
-        return Product.executeQuery("""
-                select p from Product p
-                where p.active = true
-                and p.upc is not null
-                and trim(leading '0' from trim(p.upc)) = :key
-                order by p.name""", [key: key])
+    List<Product> findProducts(ProductIdentifiers identifiers) {
+        List<String> conditions = []
+        Map params = [:]
+        if (identifiers.barcode) {
+            conditions << "(p.upc is not null and trim(leading '0' from trim(p.upc)) = :key)"
+            params.key = gtinKey(identifiers.barcode)
+        }
+        if (identifiers.ndcCandidates) {
+            conditions << "(p.ndc is not null and replace(replace(trim(p.ndc), '-', ''), ' ', '') in (:ndcForms))"
+            params.ndcForms = identifiers.ndcDigitForms as List
+        }
+        // A plain String: GORM would turn the parts of a GString into query parameters
+        String query = "select p from Product p where p.active = true and (" + conditions.join(" or ") +
+                ") order by p.name"
+        return Product.executeQuery(query, params)
     }
 
     /**
@@ -146,7 +175,7 @@ class StockScanService {
     @NotTransactional
     Transaction perform(Location location, StockScanCommand command) {
         validateQuantity(command.quantity)
-        String productKey = command.newProduct ? "new:${command.barcode}" : command.productId
+        String productKey = command.newProduct ? "new:${command.barcode ?: command.newProductNdc}" : command.productId
         synchronized (lockFor("${location.id}:${productKey}")) {
             return performInTransaction(location, command)
         }
@@ -297,13 +326,7 @@ class StockScanService {
     }
 
     private Product createProduct(Location location, StockScanCommand command) {
-        String name = command.newProductName?.trim()
-        if (!name) {
-            throw StockScanException.badRequest("Enter a name for the new product")
-        }
-        if (name.length() > MAX_NAME_LENGTH) {
-            throw StockScanException.badRequest("Product names can be at most ${MAX_NAME_LENGTH} characters")
-        }
+        Map fields = newProductFields(command)
         Category category = command.newProductCategoryId ? Category.get(command.newProductCategoryId) : null
         if (!category) {
             throw StockScanException.badRequest("Choose a category for the new product")
@@ -313,18 +336,86 @@ class StockScanService {
             throw new StockScanException(500, "No default product type is configured")
         }
 
-        Product product = new Product(
-                name: name,
-                category: category,
-                upc: normalizeBarcode(command.barcode),
-                productType: productType,
-        )
+        Product product = new Product(category: category, productType: productType)
+        // Product has no generic name field, so it's kept as an alternate name, which product search also matches
+        String genericName = fields.remove("genericName")
+        fields.each { String field, Object value -> product[field] = value }
+        if (genericName && !genericName.equalsIgnoreCase(product.name)) {
+            product.addToSynonyms(new Synonym(name: genericName, locale: LocalizationUtil.currentLocale,
+                    synonymTypeCode: SynonymTypeCode.ALTERNATE_NAME))
+        }
         // As ProductApiController.save does
         product.validateRequiredFieldsInLocation(location)
         if (product.hasErrors() || !productService.saveProduct(product)) {
             throw new ValidationException("Invalid product", product.errors)
         }
         return product
+    }
+
+    /**
+     * Checks the new product's details.
+     *
+     * @return the Product fields to set, by name
+     */
+    static Map<String, Object> newProductFields(StockScanCommand command) {
+        String name = command.newProductName?.trim()
+        if (!name) {
+            throw StockScanException.badRequest("Enter a name for the new product")
+        }
+        if (!command.barcode && !command.newProductNdc) {
+            throw StockScanException.badRequest("A new product needs a barcode or an NDC")
+        }
+        String ndc = command.newProductNdc?.trim()
+        if (ndc && !Ndc.parse(ndc)) {
+            throw StockScanException.badRequest("${ndc} isn't an NDC")
+        }
+
+        Map<String, Object> fields = [
+                name               : name,
+                upc                : command.barcode ? normalizeBarcode(command.barcode) : null,
+                ndc                : ndc ?: null,
+                genericName        : command.newProductGenericName,
+                brandName          : command.newProductBrandName,
+                manufacturer       : command.newProductManufacturer,
+                description        : command.newProductDescription,
+                lotAndExpiryControl: command.newProductLotAndExpiryControl ?: false,
+                controlledSubstance: command.newProductControlledSubstance ?: false,
+        ]
+        Map<String, String> labels = [name: "Product names", ndc: "NDCs", genericName: "Generic names",
+                                      brandName: "Brand names", manufacturer: "Manufacturer names"]
+        labels.each { String field, String label ->
+            if (fields[field] && (fields[field] as String).length() > MAX_NAME_LENGTH) {
+                throw StockScanException.badRequest("${label} can be at most ${MAX_NAME_LENGTH} characters")
+            }
+        }
+        if (fields.description && (fields.description as String).length() > MAX_DESCRIPTION_LENGTH) {
+            throw StockScanException.badRequest("Descriptions can be at most ${MAX_DESCRIPTION_LENGTH} characters")
+        }
+        return fields
+    }
+
+    /**
+     * A suggested new product for a code that matched no product, filled in from the providers' details if there
+     * are any. Drugs get lot and expiry control, so every addition records them; drugs with a DEA schedule are
+     * marked as controlled substances. The person creating the product can change any of it.
+     *
+     * @return the fields of a newProduct for POST /api/stockScans, without the category
+     */
+    static Map<String, Object> newProductDraft(ProductIdentifiers identifiers, ProductFacts facts) {
+        boolean drug = identifiers.drug || facts?.kind?.drug
+        // A single candidate is a known NDC; several are guesses at the hyphenation, which the provider settles
+        String ndc = facts?.ndc ?: (identifiers.ndcCandidates.size() == 1 ? identifiers.ndcCandidates[0].hyphenated : null)
+        return [
+                name               : facts?.name?.take(MAX_NAME_LENGTH),
+                upc                : identifiers.barcode,
+                ndc                : ndc,
+                genericName        : facts?.genericName?.take(MAX_NAME_LENGTH),
+                brandName          : facts?.brandName?.take(MAX_NAME_LENGTH),
+                manufacturer       : facts?.manufacturer?.take(MAX_NAME_LENGTH),
+                description        : facts?.packageDescription?.take(MAX_DESCRIPTION_LENGTH),
+                lotAndExpiryControl: drug,
+                controlledSubstance: facts?.deaSchedule != null,
+        ] as Map<String, Object>
     }
 
     private static Product requireProduct(String productId) {

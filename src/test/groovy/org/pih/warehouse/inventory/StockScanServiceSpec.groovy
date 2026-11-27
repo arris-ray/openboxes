@@ -11,6 +11,9 @@ import org.pih.warehouse.core.ActivityCode
 import org.pih.warehouse.core.Constants
 import org.pih.warehouse.core.Location
 import org.pih.warehouse.product.Product
+import org.pih.warehouse.productfacts.ProductFacts
+import org.pih.warehouse.productfacts.ProductIdentifiers
+import org.pih.warehouse.productfacts.ProductKind
 
 @Unroll
 class StockScanServiceSpec extends Specification implements ServiceUnitTest<StockScanService>, DataTest {
@@ -337,6 +340,28 @@ class StockScanServiceSpec extends Specification implements ServiceUnitTest<Stoc
         command.expirationDate.format("yyyy-MM-dd") == "2027-03-31"
         command.comment == null
         command.productId == null
+        command.newProductNdc == null
+        command.newProductLotAndExpiryControl == null
+    }
+
+    void "StockScanCommand reads a new product's details"() {
+        when:
+        StockScanCommand command = StockScanCommand.fromJson(new JSONObject('''{
+            "action": "ADD", "quantity": 1,
+            "newProduct": {"name": "Lisinopril 20 mg Tablet", "categoryId": "cat-1", "upc": "0343547422103",
+                           "ndc": "43547-422-10", "genericName": "lisinopril", "brandName": " Zestril ",
+                           "manufacturer": "Solco", "description": "100 Tablet in 1 Bottle",
+                           "lotAndExpiryControl": true, "controlledSubstance": "false"}
+        }'''))
+
+        then:
+        command.newProductNdc == "43547-422-10"
+        command.newProductGenericName == "lisinopril"
+        command.newProductBrandName == "Zestril"
+        command.newProductManufacturer == "Solco"
+        command.newProductDescription == "100 Tablet in 1 Bottle"
+        command.newProductLotAndExpiryControl == true
+        command.newProductControlledSubstance == false
     }
 
     void "StockScanCommand reads a USE of a chosen row"() {
@@ -369,7 +394,94 @@ class StockScanServiceSpec extends Specification implements ServiceUnitTest<Stoc
                 '{"action": "ADD", "quantity": "two"}',
                 '{"action": "ADD", "quantity": 1, "expirationDate": "31/03/2027"}',
                 '{"action": "ADD", "quantity": 1, "expirationDate": "2027-02-30"}',
+                '{"action": "ADD", "quantity": 1, "newProduct": {"name": "X", "lotAndExpiryControl": "yes"}}',
         ]
+    }
+
+    void "newProductFields keeps a new product's details"() {
+        given:
+        StockScanCommand command = new StockScanCommand(newProductName: " Lisinopril ", barcode: "0-343547-422103",
+                newProductNdc: "43547-422-10", newProductGenericName: "lisinopril", newProductBrandName: null,
+                newProductManufacturer: "Solco", newProductDescription: "100 Tablet in 1 Bottle",
+                newProductLotAndExpiryControl: true)
+
+        expect:
+        StockScanService.newProductFields(command) == [
+                name: "Lisinopril", upc: "0343547422103", ndc: "43547-422-10", genericName: "lisinopril",
+                brandName: null, manufacturer: "Solco", description: "100 Tablet in 1 Bottle",
+                lotAndExpiryControl: true, controlledSubstance: false,
+        ]
+    }
+
+    void "newProductFields accepts an NDC without a barcode"() {
+        expect:
+        StockScanService.newProductFields(new StockScanCommand(newProductName: "Lisinopril", newProductNdc: "4354742210"))
+                .subMap(["upc", "ndc"]) == [upc: null, ndc: "4354742210"]
+    }
+
+    void "newProductFields rejects #problem"() {
+        when:
+        StockScanService.newProductFields(new StockScanCommand([newProductName: "Lisinopril", barcode: "0343547422103"] + fields))
+
+        then:
+        StockScanException e = thrown()
+        e.status == 400
+
+        where:
+        problem                     | fields
+        "a missing name"            | [newProductName: " "]
+        "no barcode or NDC"         | [barcode: null]
+        "a bad barcode"             | [barcode: "12AB"]
+        "a bad NDC"                 | [newProductNdc: "123-45"]
+        "a long generic name"       | [newProductGenericName: "x" * 256]
+        "a long description"        | [newProductDescription: "x" * 2001]
+    }
+
+    void "newProductDraft fills a drug from its details, with lot and expiry control"() {
+        given:
+        ProductIdentifiers ids = ProductIdentifiers.parse("0343547422103")
+        ProductFacts facts = new ProductFacts(name: "Lisinopril 20 mg Tablet", genericName: "lisinopril",
+                brandName: "Zestril", manufacturer: "Solco", ndc: "43547-422-10",
+                packageDescription: "100 Tablet in 1 Bottle", kind: ProductKind.PRESCRIPTION_DRUG)
+
+        expect:
+        StockScanService.newProductDraft(ids, facts) == [
+                name: "Lisinopril 20 mg Tablet", upc: "0343547422103", ndc: "43547-422-10", genericName: "lisinopril",
+                brandName: "Zestril", manufacturer: "Solco", description: "100 Tablet in 1 Bottle",
+                lotAndExpiryControl: true, controlledSubstance: false,
+        ]
+    }
+
+    void "newProductDraft marks a scheduled drug as a controlled substance"() {
+        expect:
+        StockScanService.newProductDraft(ProductIdentifiers.parse("0343547422103"),
+                new ProductFacts(kind: ProductKind.PRESCRIPTION_DRUG, deaSchedule: "CII")).controlledSubstance
+    }
+
+    void "newProductDraft without details: lot control #lotControl and NDC #ndc for '#code'"() {
+        when:
+        Map draft = StockScanService.newProductDraft(ProductIdentifiers.parse(code), null)
+
+        then:
+        draft.name == null
+        draft.lotAndExpiryControl == lotControl
+        draft.ndc == ndc
+        !draft.controlledSubstance
+
+        where:
+        code             || lotControl | ndc
+        // A drug barcode whose NDC hyphenation is unknown without a provider
+        "0343547422103"  || true       | null
+        "43547-422-10"   || true       | "43547-422-10"
+        "3017624010701"  || false      | null
+    }
+
+    void "newProductDraft leaves food and OTC kinds to the details"() {
+        expect:
+        !StockScanService.newProductDraft(ProductIdentifiers.parse("3017624010701"),
+                new ProductFacts(name: "Nutella", kind: ProductKind.FOOD)).lotAndExpiryControl
+        StockScanService.newProductDraft(ProductIdentifiers.parse("808829127164"),
+                new ProductFacts(name: "Deodorant", kind: ProductKind.OTC_DRUG)).lotAndExpiryControl
     }
 
     private static AvailableItem row(String inventoryItemId, String binLocationId, int quantityOnHand,

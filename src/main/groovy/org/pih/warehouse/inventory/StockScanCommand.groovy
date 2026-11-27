@@ -16,8 +16,9 @@ import org.grails.web.json.JSONObject
 /**
  * A request to add or use stock from a barcode scan (POST /api/stockScans).
  *
- * ADD takes either an existing product (productId) or a new one (newProductName, newProductCategoryId and barcode),
- * plus an optional lot, expiration date and bin. USE takes an existing product and, when it's in stock in more than
+ * ADD takes either an existing product (productId) or a new one, plus an optional lot, expiration date and bin. A new
+ * product needs a name, a category, and a barcode (upc) or an NDC; it may also have a generic name, brand name,
+ * manufacturer, description, and the lot/expiry control and controlled substance switches. USE takes an existing product and, when it's in stock in more than
  * one place, the row to take it from (inventoryItemId and binLocationId, as returned by the lookup).
  */
 class StockScanCommand {
@@ -28,6 +29,13 @@ class StockScanCommand {
     String productId
     String newProductName
     String newProductCategoryId
+    String newProductNdc
+    String newProductGenericName
+    String newProductBrandName
+    String newProductManufacturer
+    String newProductDescription
+    Boolean newProductLotAndExpiryControl
+    Boolean newProductControlledSubstance
     String barcode
     Integer quantity
     String lotNumber
@@ -59,6 +67,13 @@ class StockScanCommand {
                 productId: text(json, "productId"),
                 newProductName: newProduct != null ? (text(newProduct, "name") ?: "") : null,
                 newProductCategoryId: newProduct != null ? text(newProduct, "categoryId") : null,
+                newProductNdc: newProduct != null ? text(newProduct, "ndc") : null,
+                newProductGenericName: newProduct != null ? text(newProduct, "genericName") : null,
+                newProductBrandName: newProduct != null ? text(newProduct, "brandName") : null,
+                newProductManufacturer: newProduct != null ? text(newProduct, "manufacturer") : null,
+                newProductDescription: newProduct != null ? text(newProduct, "description") : null,
+                newProductLotAndExpiryControl: newProduct != null ? bool(newProduct, "lotAndExpiryControl") : null,
+                newProductControlledSubstance: newProduct != null ? bool(newProduct, "controlledSubstance") : null,
                 barcode: newProduct != null ? text(newProduct, "upc") : text(json, "barcode"),
                 quantity: integer(json, "quantity"),
                 lotNumber: text(json, "lotNumber"),
@@ -81,6 +96,18 @@ class StockScanCommand {
             return null
         }
         return value.toString().trim() ?: null
+    }
+
+    /** true or false (JSON booleans, or the strings), or null when missing */
+    private static Boolean bool(Map json, String key) {
+        String value = text(json, key)
+        if (value == null) {
+            return null
+        }
+        if (!(value.toLowerCase() in ["true", "false"])) {
+            throw StockScanException.badRequest("${key} must be true or false")
+        }
+        return value.toLowerCase() == "true"
     }
 
     private static Integer integer(Map json, String key) {
