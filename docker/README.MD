@@ -24,3 +24,17 @@ These compose files support running against officially released OpenBoxes images
 3. Optionally create a `.env` file containing any environment variable overrides that you need. See `.env.example` for a reference. If you do not provide an override for a variable, the default will be used. For example, given a line like `{DATASOURCE_USERNAME:-openboxes}` in the compose file, if `DATASOURCE_USERNAME` is not defined in your .env file, or it is blank, a value of `openboxes` will be used.
 4. Run `docker compose up` to start your containers. You can select the compose file to use by specifying the `-f <config file>` argument. For example: `docker compose -f docker-compose-hostdb.yml up`
 5. Look in `docker-compose`'s logs for `Grails application running at http:/localhost:8080/openboxes in environment: production` and connect to that URL
+
+## Building an image from source (any architecture)
+`Dockerfile.source` compiles the WAR inside a container and then builds the same runtime image as `Dockerfile`. It
+needs no JDK or Node on the host, and works on arm64 machines such as Apple Silicon Macs, where the Node version
+pinned by the build has no native macOS binary.
+
+From the repository root, run:
+
+```
+docker build -f docker/Dockerfile.source -t openboxes/openboxes:latest .
+```
+
+Then follow the steps above, setting `OB_VERSION=latest` and a blank `OB_IMAGE_REPOSITORY=` in your `.env` file so
+that compose uses the locally built image.
