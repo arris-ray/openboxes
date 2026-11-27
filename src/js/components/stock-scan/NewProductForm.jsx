@@ -6,6 +6,7 @@ import {
   buildNewProductPayload, factRows, initialCategoryId, isNewProductComplete, rememberCategoryId,
 } from 'components/stock-scan/newProduct';
 import QuantityStepper from 'components/stock-scan/QuantityStepper';
+import { scannedLotShape } from 'components/stock-scan/scannedLot';
 import { MAX_QUANTITY } from 'components/stock-scan/stockScanConstants';
 import { CATEGORY_URL } from 'consts/applicationUrls';
 import useTranslate from 'hooks/useTranslate';
@@ -16,7 +17,7 @@ import useTranslate from 'hooks/useTranslate';
  * providers when they found the product.
  */
 const NewProductForm = ({
-  barcode, draft, facts, categories, submitting, error, onSubmit, onCancel,
+  barcode, draft, facts, scannedLot, categories, submitting, error, onSubmit, onCancel,
 }) => {
   const translate = useTranslate();
   const [name, setName] = useState(draft?.name || '');
@@ -27,8 +28,8 @@ const NewProductForm = ({
   const [controlledSubstance, setControlledSubstance] = useState(
     Boolean(draft?.controlledSubstance),
   );
-  const [lotNumber, setLotNumber] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
+  const [lotNumber, setLotNumber] = useState(scannedLot?.lotNumber || '');
+  const [expirationDate, setExpirationDate] = useState(scannedLot?.expirationDate || '');
   const [quantity, setQuantity] = useState(1);
 
   const form = {
@@ -251,6 +252,8 @@ NewProductForm.propTypes = {
   barcode: PropTypes.string.isRequired,
   draft: newProductDraftShape,
   facts: productFactsShape,
+  /** Lot and expiry read from the package's DataMatrix */
+  scannedLot: scannedLotShape,
   /** Categories a product can be assigned to, with labels showing their path */
   categories: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.string.isRequired,
@@ -265,5 +268,6 @@ NewProductForm.propTypes = {
 NewProductForm.defaultProps = {
   draft: null,
   facts: null,
+  scannedLot: null,
   error: null,
 };

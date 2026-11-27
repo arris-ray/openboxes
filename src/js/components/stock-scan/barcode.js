@@ -68,3 +68,75 @@ export const normalizeBarcode = (code, format) => {
   }
   return digits;
 };
+
+/** How long to keep looking for a drug package's DataMatrix after reading its linear barcode. */
+export const DATA_MATRIX_WAIT_MS = 1500;
+
+/** @returns {string|null} the 10 NDC digits of a US drug GTIN (GS1 prefix 03), or null */
+export const drugNdcDigits = (code) => {
+  if (!/^(\d{12,14})$/.test(code || '')) {
+    return null;
+  }
+  const gtin14 = code.padStart(14, '0');
+  return gtin14.slice(1, 3) === '03' ? gtin14.slice(3, 13) : null;
+};
+
+/**
+ * Decides which read to use. Most codes are used as soon as they're read. A drug's linear barcode
+ * is held briefly: prescription packages also carry a DataMatrix with the lot and expiry, so if
+ * that's read for the same drug within the wait, it's used instead.
+ *
+ * @param {object} options
+ * @param {function} options.onResolve called once, with the read to use
+ * @param {function} [options.onWait] called when a drug barcode is held
+ * @param {number} [options.waitMs]
+ * @returns {{offer: function, cancel: function}} offer(read) with read = {code, ndc, lot,
+ *   expirationDate, matrix}; cancel() stops it resolving
+ */
+export const createScanResolver = ({
+  onResolve, onWait = () => {}, waitMs = DATA_MATRIX_WAIT_MS,
+  schedule = setTimeout, unschedule = clearTimeout,
+}) => {
+  let held = null;
+  let timer = null;
+  let done = false;
+
+  const resolve = (read) => {
+    if (done) {
+      return;
+    }
+    done = true;
+    if (timer) {
+      unschedule(timer);
+    }
+    onResolve(read);
+  };
+
+  return {
+    offer: (read) => {
+      if (done) {
+        return;
+      }
+      if (held) {
+        // Only a DataMatrix for the same drug replaces the held barcode
+        if (read.matrix && drugNdcDigits(read.code) === drugNdcDigits(held.code)) {
+          resolve(read);
+        }
+        return;
+      }
+      if (!read.matrix && drugNdcDigits(read.code)) {
+        held = read;
+        timer = schedule(() => resolve(held), waitMs);
+        onWait(read);
+        return;
+      }
+      resolve(read);
+    },
+    cancel: () => {
+      done = true;
+      if (timer) {
+        unschedule(timer);
+      }
+    },
+  };
+};

@@ -43,6 +43,8 @@ const StockScanPage = () => {
   const [mode, setMode] = useState(readStoredMode);
   const [screen, setScreen] = useState(Screen.SCAN);
   const [barcode, setBarcode] = useState(null);
+  // Lot and expiry read from a DataMatrix with the scan, to fill in the forms
+  const [scannedLot, setScannedLot] = useState(null);
   // The last code looked up; the camera briefly ignores it when it restarts
   const [lastScanned, setLastScanned] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -76,20 +78,29 @@ const StockScanPage = () => {
   const backToScan = () => {
     setScreen(Screen.SCAN);
     setBarcode(null);
+    setScannedLot(null);
     setMatches([]);
     setUnknown(null);
     setSelected(null);
     setError(null);
   };
 
-  const lookup = async (scanned) => {
+  /**
+   * @param {string|object} input a typed code, or a camera read: {code, ndc, lot, expirationDate}
+   */
+  const lookup = async (input) => {
+    const read = typeof input === 'string' ? { code: input } : input;
+    const shown = read.code || read.ndc;
     setBanner(null);
     setError(null);
-    setBarcode(scanned);
-    setLastScanned(scanned);
+    setBarcode(shown);
+    setLastScanned(shown);
+    setScannedLot(read.lot || read.expirationDate
+      ? { lotNumber: read.lot || '', expirationDate: read.expirationDate || '' }
+      : null);
     setScreen(Screen.LOADING);
     try {
-      const response = await stockScanApi.lookup(scanned);
+      const response = await stockScanApi.lookup(read.code, read.ndc);
       const found = response.data.data;
       setMatches(found);
       setUnknown(found.length ? null : {
@@ -237,6 +248,7 @@ const StockScanPage = () => {
           key={`${selected.product.id}-${mode}`}
           mode={mode}
           productStock={selected}
+          scannedLot={scannedLot}
           submitting={submitting}
           error={error}
           onSubmit={perform}
@@ -250,6 +262,7 @@ const StockScanPage = () => {
           <NewProductForm
             barcode={barcode}
             draft={unknown?.draft}
+            scannedLot={scannedLot}
             facts={unknown?.facts}
             categories={categories}
             submitting={submitting}
