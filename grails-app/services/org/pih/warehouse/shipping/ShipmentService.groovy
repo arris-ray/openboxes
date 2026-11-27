@@ -2342,10 +2342,15 @@ class ShipmentService {
                 WHERE
                     l.active = TRUE
                     AND (
-                        (size(l.supportedActivities) <> 0 AND :activityCode IN elements(lt.supportedActivities))
+                        (size(l.supportedActivities) = 0 AND :activityCode IN elements(lt.supportedActivities))
                         OR (:activityCode IN elements(l.supportedActivities))
                     )
                 """, [activityCode: activityCode.toString()])
+
+        // An empty list would make the "in" restriction below invalid SQL
+        if (!activeLocationsSupportingActivity) {
+            return []
+        }
 
         return ShipmentItem.createCriteria().list {
             createAlias("shipment", "s")
